@@ -17,7 +17,7 @@ This plugin is the backend component of the **Velocity Shop System**, running on
 - **Shop GUI**: Provides a GUI for players to buy and sell items.
 - **Dynamic Pricing System**: An economic system where item prices fluctuate based on transaction volume.
 - **Database Integration**: Uses MySQL to store prices and transaction history.
-- **Cross-Server Synchronization**: Real-time synchronization of price information with other servers via the Velocity proxy.
+- **Cross-Server Synchronization**: Real-time synchronization of price information with other servers via the Velocity proxy. (*Requires separate [Velocity-ShopSync](https://github.com/minseokk7/Velocity-ShopSync) proxy plugin installation*)
 
 ## Installation
 1. Place the `VelocityShopSystem-Backend-1.0.2.jar` file into the `plugins` folder of each server.
