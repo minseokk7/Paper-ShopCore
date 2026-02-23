@@ -1,0 +1,75 @@
+# ==========================================
+#        Paper-ShopCore 메시지 설정
+#
+# 지원 포맷: MiniMessage
+# 사용 예시: <green>초록색 텍스트</green>, <gradient:red:blue>그라데이션 텍스트</gradient>
+# 미니메시지 공식 문서: https://docs.advntr.dev/minimessage/format.html
+# ==========================================
+
+# 플러그인 공통 접두사
+prefix: "<gray>[<gradient:gold:yellow>ShopCore</gradient><gray>] <reset>"
+
+# 일반적인 공지나 로드/성공 메시지
+general:
+  success: "<green>성공적으로 처리되었습니다."
+  error: "<red>오류가 발생했습니다. 관리자에게 문의하세요."
+  no-permission: "<red>이 명령어를 사용할 권한이 없습니다."
+  player-only: "<red>이 명령어는 플레이어만 사용할 수 있습니다."
+  invalid-player: "<red>해당 플레이어를 찾을 수 없거나 오프라인입니다: <yellow>%player%"
+  invalid-amount: "<red>올바른 금액(숫자)을 입력해주세요."
+  reload-success: "<green>플러그인 설정 및 데이터를 성공적으로 다시 불러왔습니다!"
+
+# 경제 (Economy) 명령어 메시지
+economy:
+  balance-self: "<green>현재 보유 금액: <gold>%balance%원"
+  balance-other: "<yellow>%player%<green>님의 보유 금액: <gold>%balance%원"
+  
+  pay-success-sender: "<yellow>%target%<green>님에게 <gold>%amount%원<green>을 송금했습니다."
+  pay-success-receiver: "<yellow>%sender%<green>님으로부터 <gold>%amount%원<green>을 받았습니다."
+  pay-not-enough: "<red>송금할 잔액이 부족합니다."
+  pay-invalid-amount: "<red>송금액은 0보다 커야 합니다."
+  pay-self: "<red>자기 자신에게는 송금할 수 없습니다."
+  
+  admin-give: "<yellow>%player%<green>님에게 <gold>%amount%원<green>을 지급했습니다."
+  admin-receive: "<green>관리자로부터 <gold>%amount%원<green>을 지급받았습니다!"
+  admin-take: "<yellow>%player%<green>님의 금액 중 <gold>%amount%원<green>을 차감했습니다."
+  admin-take-notify: "<red>관리자에 의해 <gold>%amount%원<red>이 차감되었습니다."
+  admin-set: "<yellow>%player%<green>님의 금액을 <gold>%amount%원<green>으로 설정했습니다."
+  admin-set-notify: "<yellow>보유 금액이 <gold>%amount%원<yellow>으로 변경되었습니다."
+  admin-reset: "<yellow>%player%<green>님의 금액을 초기화했습니다."
+  admin-reset-notify: "<red>보유 금액이 초기화되었습니다."
+
+# 상점 (Shop) 명령어/동작 메시지
+shop:
+  not-enough-money: "<red>구매할 잔액이 부족합니다. (필요: <gold>%price%원<red>)"
+  not-enough-space: "<red>인벤토리 공간이 부족합니다."
+  not-enough-item: "<red>판매할 아이템이 부족합니다."
+  
+  buy-success: "<green>성공적으로 아이템을 구매했습니다! (-<gold>%price%원<green>)"
+  sell-success: "<green>성공적으로 아이템을 판매했습니다! (+<gold>%price%원<green>)"
+  sell-fail-unmarketable: "<red>이 아이템은 상점에 판매할 수 없습니다."
+  
+  sellall-success: "<green>인벤토리의 모든 아이템을 판매하여 <gold>%price%원<green>을 얻었습니다!"
+  sellall-no-items: "<red>판매할 수 있는 아이템이 인벤토리에 없습니다."
+
+# 관리자 상점 에디터 (EShop) 메시지
+eshop:
+  item-added: "<green>아이템이 상점에 성공적으로 추가되었습니다."
+  item-edited: "<green>상점 아이템 설정이 수정되었습니다."
+  item-deleted: "<red>상점 아이템이 삭제되었습니다."
+  section-added: "<green>새로운 카테고리(섹션)가 추가되었습니다."
+  section-edited: "<green>카테고리 설정이 수정되었습니다."
+  section-deleted: "<red>카테고리가 삭제되었습니다."
+
+# 상점 인터페이스(GUI) 텍스트 커스터마이징
+gui:
+  main-title: "<dark_gray>서버 통합 상점"
+  sell-gui-title: "<dark_gray>일괄 판매 창"
+  
+  button-buy: "<green>▶ 좌클릭하여 구매"
+  button-sell: "<red>▶ 우클릭하여 판매"
+  button-buy-all: "<yellow>▶ Shift + 좌클릭으로 대량 구매"
+  button-sell-all: "<gold>▶ Shift + 우클릭으로 대량 판매"
+  
+  price-buy: "<gray>구매가: <green>%price%원"
+  price-sell: "<gray>판매가: <red>%price%원"

@@ -1,6 +1,7 @@
 package me.minseok.shopsystem.shop;
 
 import me.minseok.shopsystem.economy.VaultEconomy;
+import me.minseok.shopsystem.utils.MessageManager;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -23,11 +24,13 @@ public class ShopGUI implements Listener {
 
     private final ShopManager shopManager;
     private final VaultEconomy economy;
+    private final MessageManager messageManager;
     private final Map<String, Map<Integer, Inventory>> pageCache = new HashMap<>(); // 페이지 캐싱
 
-    public ShopGUI(ShopManager shopManager, VaultEconomy economy) {
+    public ShopGUI(ShopManager shopManager, VaultEconomy economy, MessageManager messageManager) {
         this.shopManager = shopManager;
         this.economy = economy;
+        this.messageManager = messageManager;
     }
 
     public void openMainMenu(Player player) {
@@ -109,7 +112,7 @@ public class ShopGUI implements Listener {
         if (!player.hasPermission("shopsystem.shop." + category.getId()) &&
                 !player.hasPermission("shopsystem.shop.*") &&
                 !player.hasPermission("shopsystem.admin")) {
-            player.sendMessage("§c이 상점에 접근할 권한이 없습니다!");
+            messageManager.send(player, "general.no-permission");
             return;
         }
 
@@ -179,22 +182,38 @@ public class ShopGUI implements Listener {
             lore.add("§eShift + 좌클릭: §f64개 구매");
             lore.add("§eShift + 우클릭: §f전체 판매");
 
-            // Check one-time purchase
+            // Check one-time purchase asymmetrically to prevent lag
             if (item.isOneTime()) {
-                if (shopManager.getDatabase().hasPurchased(player.getUniqueId(), item.getMaterial().name())) {
-                    display.setType(Material.BARRIER);
-                    meta = display.getItemMeta();
-                    if (meta != null) {
-                        meta.setDisplayName("§c§l[구매 완료] " + item.getMaterial().name());
-                    }
-                    lore.clear();
-                    lore.add("");
-                    lore.add("§c이미 구매한 아이템입니다");
-                    lore.add("§7더 이상 구매할 수 없습니다");
-                } else {
-                    lore.add("");
-                    lore.add("§bℹ 1회 한정 구매 상품입니다");
-                }
+                shopManager.getDatabase().hasPurchased(player.getUniqueId(), item.getMaterial().name())
+                        .thenAcceptAsync(purchased -> {
+                            Bukkit.getScheduler().runTask(shopManager.getPlugin(), () -> {
+                                if (purchased) {
+                                    display.setType(Material.BARRIER);
+                                    ItemMeta displayMeta = display.getItemMeta();
+                                    if (displayMeta != null) {
+                                        displayMeta.setDisplayName("§c§l[구매 완료] " + item.getMaterial().name());
+                                        List<String> errorLore = new ArrayList<>();
+                                        errorLore.add("");
+                                        errorLore.add("§c이미 구매한 아이템입니다");
+                                        errorLore.add("§7더 이상 구매할 수 없습니다");
+                                        displayMeta.setLore(errorLore);
+                                        display.setItemMeta(displayMeta);
+                                    }
+                                } else {
+                                    ItemMeta displayMeta = display.getItemMeta();
+                                    if (displayMeta != null) {
+                                        List<String> currentLore = displayMeta.getLore();
+                                        if (currentLore == null) {
+                                            currentLore = new ArrayList<>();
+                                        }
+                                        currentLore.add("");
+                                        currentLore.add("§bℹ 1회 한정 구매 상품입니다");
+                                        displayMeta.setLore(currentLore);
+                                        display.setItemMeta(displayMeta);
+                                    }
+                                }
+                            });
+                        });
             }
 
             if (meta != null) {
@@ -343,16 +362,25 @@ public class ShopGUI implements Listener {
             ShopManager.ShopItem shopItem = category.getItems().get(itemIndex);
 
             boolean isBuy = event.isLeftClick();
-            int amount = event.isShiftClick() ? 64 : 1;
+            final int amount = event.isShiftClick() ? 64 : 1;
 
             if (isBuy) {
                 // Check one-time purchase
-                if (shopItem.isOneTime() && shopManager.getDatabase().hasPurchased(player.getUniqueId(),
-                        shopItem.getId())) {
-                    player.sendMessage("§c이미 구매한 아이템입니다!");
-                    return;
+                if (shopItem.isOneTime()) {
+                    shopManager.getDatabase().hasPurchased(player.getUniqueId(), shopItem.getId())
+                            .thenAcceptAsync(purchased -> {
+                                Bukkit.getScheduler().runTask(
+                                        org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(ShopGUI.class), () -> {
+                                            if (purchased) {
+                                                messageManager.sendCustom(player, "<red>이미 구매한 아이템입니다!");
+                                            } else {
+                                                handlePurchase(player, shopItem, amount);
+                                            }
+                                        });
+                            });
+                } else {
+                    handlePurchase(player, shopItem, amount);
                 }
-                handlePurchase(player, shopItem, amount);
             } else {
                 if (event.isShiftClick()) {
                     // Sell All logic
@@ -365,12 +393,13 @@ public class ShopGUI implements Listener {
                     }
 
                     if (total == 0) {
-                        player.sendMessage("§c판매할 아이템이 없습니다!");
+                        messageManager.sendCustom(player, "<red>판매할 아이템이 없습니다!");
                         return;
                     }
-                    amount = total;
+                    handleSale(player, shopItem, total);
+                } else {
+                    handleSale(player, shopItem, amount);
                 }
-                handleSale(player, shopItem, amount);
             }
 
             // Refresh GUI to show new prices
@@ -430,7 +459,7 @@ public class ShopGUI implements Listener {
             player.sendPluginMessage(org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(ShopGUI.class), "BungeeCord",
                     b.toByteArray());
         } catch (Exception e) {
-            player.sendMessage("§c서버 이동 중 오류가 발생했습니다.");
+            messageManager.sendCustom(player, "<red>서버 이동 중 오류가 발생했습니다.");
             e.printStackTrace();
         }
     }
@@ -439,19 +468,19 @@ public class ShopGUI implements Listener {
         double totalPrice = item.getBuyPrice() * amount;
 
         if (!economy.has(player, totalPrice)) {
-            player.sendMessage("§c잔액이 부족합니다! 필요: " + economy.format(totalPrice));
+            messageManager.sendCustom(player, "<red>잔액이 부족합니다! 필요: " + economy.format(totalPrice));
             return;
         }
 
         // Check inventory space
         if (player.getInventory().firstEmpty() == -1) {
-            player.sendMessage("§c인벤토리에 공간이 없습니다!");
+            messageManager.sendCustom(player, "<red>인벤토리에 공간이 없습니다!");
             return;
         }
 
         EconomyResponse response = economy.withdrawPlayer(player, totalPrice);
         if (!response.transactionSuccess()) {
-            player.sendMessage("§c구매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>구매 실패: " + response.errorMessage);
             return;
         }
 
@@ -459,14 +488,14 @@ public class ShopGUI implements Listener {
         ItemStack toAdd = createShopItemStack(item, amount);
         player.getInventory().addItem(toAdd);
 
-        player.sendMessage("§a✓ " + item.getMaterial().name() + " x" + amount + "을(를) " +
+        messageManager.sendCustom(player, "<green>✓ " + item.getMaterial().name() + " x" + amount + "을(를) " +
                 economy.format(totalPrice) + "에 구매했습니다");
-        player.sendMessage("§7잔액: " + economy.format(response.balance));
+        messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
         // Adjust price
         if (item.hasDynamicPricing()) {
             shopManager.adjustPrice(item, true, amount);
-            player.sendMessage("§6📊 수요 증가로 가격이 상승했습니다!");
+            messageManager.sendCustom(player, "<gold>📊 수요 증가로 가격이 상승했습니다!");
         }
 
         // Record one-time purchase
@@ -479,7 +508,7 @@ public class ShopGUI implements Listener {
         // Check if player has enough items
         ItemStack checkItem = createShopItemStack(item, 1);
         if (!player.getInventory().containsAtLeast(checkItem, amount)) {
-            player.sendMessage("§c판매할 아이템이 부족합니다!");
+            messageManager.sendCustom(player, "<red>판매할 아이템이 부족합니다!");
             return;
         }
 
@@ -500,18 +529,18 @@ public class ShopGUI implements Listener {
             // sell)
             ItemStack toAdd = createShopItemStack(item, amount);
             player.getInventory().addItem(toAdd);
-            player.sendMessage("§c판매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
             return;
         }
 
-        player.sendMessage("§a✓ " + item.getMaterial().name() + " x" + amount + "을(를) " +
+        messageManager.sendCustom(player, "<green>✓ " + item.getMaterial().name() + " x" + amount + "을(를) " +
                 economy.format(totalPrice) + "에 판매했습니다");
-        player.sendMessage("§7잔액: " + economy.format(response.balance));
+        messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
         // Adjust price
         if (item.hasDynamicPricing()) {
             shopManager.adjustPrice(item, false, amount);
-            player.sendMessage("§6📊 공급 증가로 가격이 하락했습니다!");
+            messageManager.sendCustom(player, "<gold>📊 공급 증가로 가격이 하락했습니다!");
         }
     }
 
@@ -748,19 +777,40 @@ public class ShopGUI implements Listener {
                     lore.add("§eShift + 우클릭: §f전체 판매");
 
                     if (updatedItem.isOneTime()) {
-                        if (shopManager.getDatabase().hasPurchased(player.getUniqueId(),
-                                updatedItem.getId())) { // Use ID for check
-                            newItem.setType(Material.BARRIER);
-                            meta = newItem.getItemMeta();
-                            meta.setDisplayName("§c§l[구매 완료] " + updatedItem.getMaterial().name());
-                            lore.clear();
-                            lore.add("");
-                            lore.add("§c이미 구매한 아이템입니다");
-                            lore.add("§7더 이상 구매할 수 없습니다");
-                        } else {
-                            lore.add("");
-                            lore.add("§bℹ 1회 한정 구매 상품입니다");
-                        }
+                        shopManager.getDatabase().hasPurchased(player.getUniqueId(), updatedItem.getId())
+                                .thenAcceptAsync(purchased -> {
+                                    Bukkit.getScheduler().runTask(shopManager.getPlugin(), () -> {
+                                        if (purchased) {
+                                            newItem.setType(Material.BARRIER);
+                                            ItemMeta newMeta = newItem.getItemMeta();
+                                            if (newMeta != null) {
+                                                newMeta.setDisplayName(
+                                                        "§c§l[구매 완료] " + updatedItem.getMaterial().name());
+                                                List<String> currentLore = newMeta.getLore();
+                                                if (currentLore != null) {
+                                                    currentLore.clear();
+                                                    currentLore.add("");
+                                                    currentLore.add("§c이미 구매한 아이템입니다");
+                                                    currentLore.add("§7더 이상 구매할 수 없습니다");
+                                                    newMeta.setLore(currentLore);
+                                                }
+                                                newItem.setItemMeta(newMeta);
+                                            }
+                                        } else {
+                                            ItemMeta newMeta = newItem.getItemMeta();
+                                            if (newMeta != null) {
+                                                List<String> currentLore = newMeta.getLore();
+                                                if (currentLore == null) {
+                                                    currentLore = new ArrayList<>();
+                                                }
+                                                currentLore.add("");
+                                                currentLore.add("§bℹ 1회 한정 구매 상품입니다");
+                                                newMeta.setLore(currentLore);
+                                                newItem.setItemMeta(newMeta);
+                                            }
+                                        }
+                                    });
+                                });
                     }
 
                     meta.setLore(lore);

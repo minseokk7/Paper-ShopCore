@@ -5,6 +5,7 @@ import me.minseok.shopsystem.economy.VaultEconomy;
 import me.minseok.shopsystem.commands.*;
 import me.minseok.shopsystem.shop.ShopGUI;
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.ServicePriority;
@@ -18,19 +19,20 @@ public class ShopCore extends JavaPlugin {
     private VaultEconomy economy;
     private ShopManager shopManager;
     private ShopGUI shopGUI;
+    private MessageManager messageManager;
 
     @Override
     public void onEnable() {
         // Save default config
         saveDefaultConfig();
-        
+
         // Validate configuration
         if (!validateConfiguration()) {
             getLogger().severe("Configuration validation failed! Plugin will be disabled.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-        
+
         getLogger().info("Server Name: " + getConfig().getString("server-name", "unknown"));
 
         // Initialize database
@@ -72,6 +74,10 @@ public class ShopCore extends JavaPlugin {
         shopManager.loadConfig(getConfig());
         shopManager.loadShops();
 
+        // Initialize MessageManager
+        messageManager = new MessageManager(this);
+        messageManager.reloadMessages();
+
         // Register messaging
         getServer().getMessenger().registerIncomingPluginChannel(this, "shopsystem:sync",
                 new me.minseok.shopsystem.messaging.BackendMessageListener(this));
@@ -79,13 +85,13 @@ public class ShopCore extends JavaPlugin {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
 
         // Register economy commands
-        getCommand("balance").setExecutor(new BalanceCommand(economy));
-        getCommand("pay").setExecutor(new PayCommand(economy));
-        getCommand("baltop").setExecutor(new BaltopCommand(database));
-        getCommand("eco").setExecutor(new EcoCommand(economy));
+        getCommand("balance").setExecutor(new BalanceCommand(economy, messageManager));
+        getCommand("pay").setExecutor(new PayCommand(economy, messageManager));
+        getCommand("baltop").setExecutor(new BaltopCommand(database, messageManager, this));
+        getCommand("eco").setExecutor(new EcoCommand(economy, messageManager));
 
-        shopGUI = new ShopGUI(shopManager, economy);
-        ShopCommand shopCmd = new ShopCommand(shopGUI, shopManager);
+        shopGUI = new ShopGUI(shopManager, economy, messageManager);
+        ShopCommand shopCmd = new ShopCommand(shopGUI, shopManager, messageManager);
         getCommand("shop").setExecutor(shopCmd);
         getCommand("shop").setTabCompleter(shopCmd);
 
@@ -103,17 +109,17 @@ public class ShopCore extends JavaPlugin {
             getLogger().info("Auto-refresh task scheduled every " + refreshInterval + " seconds.");
         }
 
-        getCommand("sell").setExecutor(new SellCommand(economy));
+        getCommand("sell").setExecutor(new SellCommand(economy, messageManager));
 
-        SellAllCommand sellAllCmd = new SellAllCommand(economy, shopManager);
-        SellGUICommand sellGUICmd = new SellGUICommand(economy, shopManager);
+        SellAllCommand sellAllCmd = new SellAllCommand(economy, shopManager, messageManager);
+        SellGUICommand sellGUICmd = new SellGUICommand(economy, shopManager, messageManager);
         getCommand("sellall").setExecutor(sellAllCmd);
         getCommand("sellall").setTabCompleter(sellAllCmd);
         getCommand("sellgui").setExecutor(sellGUICmd);
 
         // Admin commands
-        EShopCommand eshopCmd = new EShopCommand(shopManager, new File(getDataFolder(), "shops"));
-        ShopGiveCommand shopGiveCmd = new ShopGiveCommand(shopManager);
+        EShopCommand eshopCmd = new EShopCommand(shopManager, new File(getDataFolder(), "shops"), messageManager);
+        ShopGiveCommand shopGiveCmd = new ShopGiveCommand(shopManager, messageManager);
         getCommand("eshop").setExecutor(eshopCmd);
         getCommand("eshop").setTabCompleter(eshopCmd);
         getCommand("shopgive").setExecutor(shopGiveCmd);
@@ -139,27 +145,28 @@ public class ShopCore extends JavaPlugin {
 
         getLogger().info("ShopCore enabled successfully");
     }
-    
+
     /**
      * 플러그인 설정을 검증합니다
+     * 
      * @return 설정이 유효하면 true, 그렇지 않으면 false
      */
     private boolean validateConfiguration() {
         FileConfiguration config = getConfig();
         boolean isValid = true;
-        
+
         // 필수 설정 검증
         String serverName = config.getString("server-name");
         if (serverName == null || serverName.isEmpty()) {
             getLogger().warning("Missing required config: server-name");
             isValid = false;
         }
-        
+
         // 데이터베이스 설정 검증
         String dbHost = config.getString("database.host");
         String dbName = config.getString("database.database");
         String dbUser = config.getString("database.username");
-        
+
         if (dbHost == null || dbHost.isEmpty()) {
             getLogger().warning("Missing required config: database.host");
             isValid = false;
@@ -172,20 +179,20 @@ public class ShopCore extends JavaPlugin {
             getLogger().warning("Missing required config: database.username");
             isValid = false;
         }
-        
+
         // 동적 가격 설정 검증
         double maxMult = config.getDouble("dynamic-pricing.max-multiplier", 5.0);
         double minMult = config.getDouble("dynamic-pricing.min-multiplier", 0.2);
-        
+
         if (maxMult <= minMult) {
             getLogger().warning("Invalid dynamic-pricing config: max-multiplier must be > min-multiplier");
             isValid = false;
         }
-        
+
         if (isValid) {
             getLogger().info("Configuration validation passed");
         }
-        
+
         return isValid;
     }
 

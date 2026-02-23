@@ -1,0 +1,133 @@
+﻿
+> Task :compileJava FAILED
+.\gradlew : E:\plugi
+ns\Paper-ShopCore\sr
+c\main\java\me\minse
+ok\shopsystem\utils\
+MessageManager.java:
+85: error: no suitab
+le method found for 
+sendMessage(Componen
+t)
+위치 줄:1 문자:1
++ .\gradlew compileJ
+ava > build_log.txt 
+2>&1 ; cat build_log
+.txt
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (E:\p   
+ lugins\Pape...s    
+age(Component):    S
+tring) [], Rem    ot
+eException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+        sender.sendM
+essage(parse(prefix 
++ getRaw(path)));
+              ^
+    method CommandSe
+nder.sendMessage(Str
+ing) is not applicab
+le
+      (argument mism
+atch; Component cann
+ot be converted to S
+tring)
+    method CommandSe
+nder.sendMessage(Str
+ing...) is not appli
+cable
+      (varargs misma
+tch; Component canno
+t be converted to St
+ring)
+    method CommandSe
+nder.sendMessage(UUI
+D,String...) is not 
+applicable
+      (argument mism
+atch; Component cann
+ot be converted to U
+UID)
+E:\plugins\Paper-Sho
+pCore\src\main\java\
+me\minseok\shopsyste
+m\utils\MessageManag
+er.java:92: error: n
+o suitable method fo
+und for sendMessage(
+Component)
+        sender.sendM
+essage(parse(prefix 
++ customMessage));
+              ^
+    method CommandSe
+nder.sendMessage(Str
+ing) is not applicab
+le
+      (argument mism
+atch; Component cann
+ot be converted to S
+tring)
+    method CommandSe
+nder.sendMessage(Str
+ing...) is not appli
+cable
+      (varargs misma
+tch; Component canno
+t be converted to St
+ring)
+    method CommandSe
+nder.sendMessage(UUI
+D,String...) is not 
+applicable
+      (argument mism
+atch; Component cann
+ot be converted to U
+UID)
+Note: E:\plugins\Pap
+er-ShopCore\src\main
+\java\me\minseok\sho
+psystem\economy\Vaul
+tEconomy.java uses o
+r overrides a deprec
+ated API.
+Note: Recompile with
+ -Xlint:deprecation 
+for details.
+Note: Some messages 
+have been simplified
+; recompile with -Xd
+iags:verbose to get 
+full output
+2 errors
+
+FAILURE: Build faile
+d with an exception.
+
+* What went wrong:
+Execution failed for
+ task ':compileJava'
+.
+> Compilation failed
+; see the compiler e
+rror output for deta
+ils.
+
+* Try:
+> Run with --info op
+tion to get more log
+ output.
+> Run with --scan to
+ get full insights.
+
+BUILD FAILED in 831m
+s
+1 actionable task: 1 executed

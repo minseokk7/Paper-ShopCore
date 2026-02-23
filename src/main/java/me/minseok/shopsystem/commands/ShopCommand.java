@@ -2,6 +2,7 @@ package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.shop.ShopGUI;
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -18,17 +19,19 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
     private final ShopGUI shopGUI;
     private final ShopManager shopManager;
+    private final MessageManager messageManager;
 
-    public ShopCommand(ShopGUI shopGUI, ShopManager shopManager) {
+    public ShopCommand(ShopGUI shopGUI, ShopManager shopManager, MessageManager messageManager) {
         this.shopGUI = shopGUI;
         this.shopManager = shopManager;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다");
+                messageManager.send(sender, "general.player-only");
                 return true;
             }
             shopGUI.openMainMenu((Player) sender);
@@ -63,14 +66,14 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
                 }
-                sender.sendMessage("§c알 수 없는 명령어: " + subCommand);
+                messageManager.sendCustom(sender, "<red>알 수 없는 명령어입니다: " + subCommand);
                 return true;
         }
     }
 
     private boolean handleReload(CommandSender sender) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
@@ -81,7 +84,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             player.sendPluginMessage(
                     me.minseok.shopsystem.ShopCore.getPlugin(me.minseok.shopsystem.ShopCore.class),
                     "shopsystem:sync", out.toByteArray());
-            sender.sendMessage("§a✓ 전체 서버 동기화 요청을 보냈습니다!");
+            messageManager.sendCustom(sender, "<green>✓ 전체 서버 동기화 요청을 보냈습니다!");
         } else {
             // Console cannot send plugin messages directly without a player connection
             // usually,
@@ -94,14 +97,14 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
             if (org.bukkit.Bukkit.getOnlinePlayers().isEmpty()) {
                 shopManager.reloadShops();
-                sender.sendMessage("§a✓ (로컬) 상점을 다시 불러왔습니다! (플레이어가 없어 전체 동기화 불가)");
+                messageManager.sendCustom(sender, "<green>✓ (로컬) 상점을 다시 불러왔습니다! (플레이어가 없어 전체 동기화 불가)");
             } else {
                 Player player = org.bukkit.Bukkit.getOnlinePlayers().iterator().next();
                 com.google.common.io.ByteArrayDataOutput out = com.google.common.io.ByteStreams.newDataOutput();
                 out.writeUTF("REQUEST_GLOBAL_RELOAD");
                 player.sendPluginMessage(me.minseok.shopsystem.ShopCore.getPlugin(
                         me.minseok.shopsystem.ShopCore.class), "shopsystem:sync", out.toByteArray());
-                sender.sendMessage("§a✓ 전체 서버 동기화 요청을 보냈습니다! (대리 전송: " + player.getName() + ")");
+                messageManager.sendCustom(sender, "<green>✓ 전체 서버 동기화 요청을 보냈습니다! (대리 전송: " + player.getName() + ")");
             }
         }
         return true;
@@ -109,12 +112,12 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleSetPrice(CommandSender sender, String[] args) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
         if (args.length < 4) {
-            sender.sendMessage("§c사용법: /shop setprice <아이템> <구매가> <판매가>");
+            messageManager.sendCustom(sender, "<red>사용법: /shop setprice <아이템> <구매가> <판매가>");
             return true;
         }
 
@@ -124,36 +127,36 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             double sellPrice = Double.parseDouble(args[3]);
 
             shopManager.updateItemPrice(itemName, buyPrice, sellPrice);
-            sender.sendMessage("§a✓ " + itemName + "의 가격을 설정했습니다!");
-            sender.sendMessage("§7구매가: " + buyPrice + ", 판매가: " + sellPrice);
+            messageManager.sendCustom(sender,
+                    "<green>✓ " + itemName + "의 가격을 설정했습니다! <gray>(구매가: " + buyPrice + ", 판매가: " + sellPrice + ")");
         } catch (NumberFormatException e) {
-            sender.sendMessage("§c잘못된 숫자 형식입니다.");
+            messageManager.send(sender, "general.invalid-amount");
         }
         return true;
     }
 
     private boolean handleReset(CommandSender sender, String[] args) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage("§c사용법: /shop reset <아이템|all>");
+            messageManager.sendCustom(sender, "<red>사용법: /shop reset <아이템|all>");
             return true;
         }
 
         if (args[1].equalsIgnoreCase("all")) {
             shopManager.resetPrices();
-            sender.sendMessage("§a✓ 모든 가격을 초기화했습니다! (변동폭 적용됨)");
+            messageManager.sendCustom(sender, "<green>✓ 모든 가격을 초기화했습니다! <gray>(변동폭 적용됨)");
         } else {
             String itemId = args[1].toUpperCase();
             ShopManager.ShopItem item = shopManager.getItemById(itemId);
             if (item != null) {
                 shopManager.resetPrice(item);
-                sender.sendMessage("§a✓ " + itemId + "의 가격을 초기화했습니다! (변동폭 적용됨)");
+                messageManager.sendCustom(sender, "<green>✓ " + itemId + "의 가격을 초기화했습니다! <gray>(변동폭 적용됨)");
             } else {
-                sender.sendMessage("§c해당 아이템을 상점에서 찾을 수 없습니다.");
+                messageManager.sendCustom(sender, "<red>해당 아이템을 상점에서 찾을 수 없습니다.");
             }
         }
         return true;
@@ -161,12 +164,12 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleHistory(CommandSender sender, String[] args) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage("§c사용법: /shop history <아이템>");
+            messageManager.sendCustom(sender, "<red>사용법: /shop history <아이템>");
             return true;
         }
 
@@ -174,34 +177,36 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         List<Map<String, Object>> history = shopManager.getPriceHistory(itemName, 10);
 
         if (history.isEmpty()) {
-            sender.sendMessage("§c가격 변동 기록이 없습니다.");
+            messageManager.sendCustom(sender, "<red>가격 변동 기록이 없습니다.");
             return true;
         }
 
-        sender.sendMessage("§e=== " + itemName + " 가격 변동 기록 ===");
+        messageManager.sendCustom(sender, "<yellow>=== " + itemName + " 가격 변동 기록 ===");
         SimpleDateFormat sdf = new SimpleDateFormat("MM-dd HH:mm");
         for (Map<String, Object> record : history) {
             double price = (double) record.get("price");
             String reason = (String) record.get("reason");
             String timestamp = sdf.format(record.get("timestamp"));
-            sender.sendMessage("§7" + timestamp + " §f" + price + " §7(" + (reason != null ? reason : "자동") + ")");
+            messageManager.sendCustom(sender,
+                    "<gray>" + timestamp + " <white>" + price + " <gray>(" + (reason != null ? reason : "자동") + ")");
         }
         return true;
     }
 
     private boolean handleStats(CommandSender sender) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
         Map<String, Integer> popular = shopManager.getPopularItems(10);
-        sender.sendMessage("§e=== 상점 통계 ===");
-        sender.sendMessage("§7총 카테고리: §f" + shopManager.getCategories().size());
-        sender.sendMessage("§7인기 아이템 TOP 10:");
+        messageManager.sendCustom(sender, "<yellow>=== 상점 통계 ===");
+        messageManager.sendCustom(sender, "<gray>총 카테고리: <white>" + shopManager.getCategories().size());
+        messageManager.sendCustom(sender, "<gray>인기 아이템 TOP 10:");
         int rank = 1;
         for (Map.Entry<String, Integer> entry : popular.entrySet()) {
-            sender.sendMessage("§f" + rank++ + ". §7" + entry.getKey() + " §f(" + entry.getValue() + " 거래)");
+            messageManager.sendCustom(sender,
+                    "<white>" + rank++ + ". <gray>" + entry.getKey() + " <white>(" + entry.getValue() + " 거래)");
         }
         return true;
     }
@@ -209,11 +214,11 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     private boolean handlePopular(CommandSender sender) {
         Map<String, Integer> popular = shopManager.getPopularItems(10);
         if (popular == null || popular.isEmpty()) {
-            sender.sendMessage("§c인기 아이템 데이터가 없습니다.");
+            messageManager.sendCustom(sender, "<red>인기 아이템 데이터가 없습니다.");
             return true;
         }
 
-        sender.sendMessage("§e=== 인기 아이템 TOP 10 ===");
+        messageManager.sendCustom(sender, "<yellow>=== 인기 아이템 TOP 10 ===");
         int rank = 1;
         for (Map.Entry<String, Integer> entry : popular.entrySet()) {
             if (entry.getKey() == null) {
@@ -223,9 +228,9 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             ShopManager.ShopItem item = shopManager.getItemById(entry.getKey());
             if (item != null) {
                 double priceChange = shopManager.calculatePriceChangePercentage(item, true);
-                String trend = priceChange > 0 ? "§a▲" : priceChange < 0 ? "§c▼" : "§7-";
-                sender.sendMessage("§f" + rank++ + ". §7" + entry.getKey() +
-                        " " + trend + " §f" + String.format("%.1f%%", Math.abs(priceChange)));
+                String trend = priceChange > 0 ? "<green>▲" : priceChange < 0 ? "<red>▼" : "<gray>-";
+                messageManager.sendCustom(sender, "<white>" + rank++ + ". <gray>" + entry.getKey() +
+                        " " + trend + " <white>" + String.format("%.1f%%", Math.abs(priceChange)));
             }
         }
         return true;
@@ -233,18 +238,18 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleSearch(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다.");
+            messageManager.send(sender, "general.player-only");
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage("§c사용법: /shop search <아이템명>");
+            messageManager.sendCustom(sender, "<red>사용법: /shop search <아이템명>");
             return true;
         }
 
         String query = args[1].toUpperCase();
         if (query == null || query.isEmpty()) {
-            sender.sendMessage("§c검색어가 비어있습니다.");
+            messageManager.sendCustom(sender, "<red>검색어가 비어있습니다.");
             return true;
         }
 
@@ -265,14 +270,15 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         }
 
         if (results.isEmpty()) {
-            sender.sendMessage("§c검색 결과가 없습니다.");
+            messageManager.sendCustom(sender, "<red>검색 결과가 없습니다.");
             return true;
         }
 
-        sender.sendMessage("§e=== 검색 결과: " + query + " ===");
+        messageManager.sendCustom(sender, "<yellow>=== 검색 결과: " + query + " ===");
         for (ShopManager.ShopItem item : results) {
-            sender.sendMessage("§f- " + item.getId() + " §7(구매: " + item.getBuyPrice() + ", 판매: "
-                    + item.getSellPrice() + ")");
+            messageManager.sendCustom(sender,
+                    "<white>- " + item.getId() + " <gray>(구매: " + item.getBuyPrice() + ", 판매: "
+                            + item.getSellPrice() + ")");
         }
         return true;
     }

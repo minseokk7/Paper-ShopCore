@@ -58,6 +58,10 @@ public class ShopManager {
         return database;
     }
 
+    public Plugin getPlugin() {
+        return plugin;
+    }
+
     public void loadConfig(FileConfiguration config) {
         if (config.contains("dynamic-pricing")) {
             buyIncreaseRate = config.getDouble("dynamic-pricing.buy-increase-rate", 0.05);

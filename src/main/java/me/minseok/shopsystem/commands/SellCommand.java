@@ -1,6 +1,7 @@
 package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.economy.VaultEconomy;
+import me.minseok.shopsystem.utils.MessageManager;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -12,15 +13,17 @@ import org.bukkit.inventory.ItemStack;
 public class SellCommand implements CommandExecutor {
 
     private final VaultEconomy economy;
+    private final MessageManager messageManager;
 
-    public SellCommand(VaultEconomy economy) {
+    public SellCommand(VaultEconomy economy, MessageManager messageManager) {
         this.economy = economy;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다.");
+            messageManager.send(sender, "general.player-only");
             return true;
         }
 
@@ -28,7 +31,7 @@ public class SellCommand implements CommandExecutor {
         ItemStack handItem = player.getInventory().getItemInMainHand();
 
         if (handItem == null || handItem.getType() == Material.AIR) {
-            player.sendMessage("§c손에 아이템을 들고 있어야 합니다!");
+            messageManager.sendCustom(player, "<red>손에 아이템을 들고 있어야 합니다!");
             return true;
         }
 
@@ -46,13 +49,13 @@ public class SellCommand implements CommandExecutor {
         EconomyResponse response = economy.depositPlayer(player, totalPrice);
 
         if (response.transactionSuccess()) {
-            player.sendMessage("§a✓ " + itemName + " x" + amount + "을(를) " +
+            messageManager.sendCustom(player, "<green>✓ " + itemName + " x" + amount + "을(를) " +
                     economy.format(totalPrice) + "에 판매했습니다!");
-            player.sendMessage("§7잔액: " + economy.format(response.balance));
+            messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
         } else {
             // Refund items if transaction failed
             player.getInventory().setItemInMainHand(handItem);
-            player.sendMessage("§c판매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
         }
 
         return true;

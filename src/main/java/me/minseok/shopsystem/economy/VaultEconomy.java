@@ -80,7 +80,7 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID is null in hasAccount");
             return false;
         }
-        
+
         String sql = "SELECT 1 FROM player_balances WHERE uuid = ?";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -109,7 +109,7 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID is null in createPlayerAccount");
             return false;
         }
-        
+
         String sql = "INSERT IGNORE INTO player_balances (uuid, balance) VALUES (?, 0.00)";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -138,7 +138,7 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID is null in getBalance");
             return 0;
         }
-        
+
         if (!hasAccount(uuid)) {
             createPlayerAccount(uuid);
         }
@@ -185,7 +185,7 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID is null in withdrawPlayer");
             return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, "Invalid UUID");
         }
-        
+
         if (amount < 0) {
             logger.log(Level.WARNING, "Attempted to withdraw negative amount: " + amount + " for uuid: " + uuid);
             return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, "Cannot withdraw negative");
@@ -193,7 +193,8 @@ public class VaultEconomy implements Economy {
 
         double balance = getBalance(uuid);
         if (balance < amount) {
-            logger.log(Level.INFO, "Withdrawal failed - insufficient funds. UUID: " + uuid + ", Required: " + amount + ", Balance: " + balance);
+            logger.log(Level.INFO, "Withdrawal failed - insufficient funds. UUID: " + uuid + ", Required: " + amount
+                    + ", Balance: " + balance);
             return new EconomyResponse(0, balance, EconomyResponse.ResponseType.FAILURE, "Insufficient funds");
         }
 
@@ -207,7 +208,8 @@ public class VaultEconomy implements Economy {
             logTransaction(uuid, reason, amount, null);
 
             double newBalance = balance - amount;
-            logger.log(Level.INFO, "Withdrawal successful. UUID: " + uuid + ", Amount: " + amount + ", Reason: " + reason + ", New Balance: " + newBalance);
+            logger.log(Level.INFO, "Withdrawal successful. UUID: " + uuid + ", Amount: " + amount + ", Reason: "
+                    + reason + ", New Balance: " + newBalance);
             return new EconomyResponse(amount, newBalance, EconomyResponse.ResponseType.SUCCESS, null);
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Failed to withdraw: " + e.getMessage(), e);
@@ -230,7 +232,7 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID is null in depositPlayer");
             return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, "Invalid UUID");
         }
-        
+
         if (amount < 0) {
             logger.log(Level.WARNING, "Attempted to deposit negative amount: " + amount + " for uuid: " + uuid);
             return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, "Cannot deposit negative");
@@ -250,7 +252,8 @@ public class VaultEconomy implements Economy {
             logTransaction(uuid, reason, amount, null);
 
             double newBalance = getBalance(uuid);
-            logger.log(Level.INFO, "Deposit successful. UUID: " + uuid + ", Amount: " + amount + ", Reason: " + reason + ", New Balance: " + newBalance);
+            logger.log(Level.INFO, "Deposit successful. UUID: " + uuid + ", Amount: " + amount + ", Reason: " + reason
+                    + ", New Balance: " + newBalance);
             return new EconomyResponse(amount, newBalance, EconomyResponse.ResponseType.SUCCESS, null);
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Failed to deposit: " + e.getMessage(), e);
@@ -263,19 +266,21 @@ public class VaultEconomy implements Economy {
             logger.log(Level.WARNING, "UUID or type is null in logTransaction");
             return;
         }
-        
-        String sql = "INSERT INTO transactions (uuid, type, amount, description) VALUES (?, ?, ?, ?)";
-        try (Connection conn = database.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, uuid.toString());
-            stmt.setString(2, type);
-            stmt.setDouble(3, amount);
-            stmt.setString(4, description);
-            stmt.executeUpdate();
-            logger.log(Level.INFO, "Transaction logged. UUID: " + uuid + ", Type: " + type + ", Amount: " + amount);
-        } catch (SQLException e) {
-            logger.log(Level.WARNING, "Failed to log transaction: " + e.getMessage(), e);
-        }
+
+        // 비동기로 트랜잭션 로그 기록 (메인 스레드 블로킹 방지)
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            String sql = "INSERT INTO transactions (uuid, type, amount, description) VALUES (?, ?, ?, ?)";
+            try (Connection conn = database.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, type);
+                stmt.setDouble(3, amount);
+                stmt.setString(4, description);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                logger.log(Level.WARNING, "트랜잭션 로그 기록 실패: " + e.getMessage(), e);
+            }
+        });
     }
 
     // Unimplemented Vault methods (world-specific, bank support, etc.)

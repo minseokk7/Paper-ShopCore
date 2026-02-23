@@ -1,6 +1,7 @@
 package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -19,16 +20,18 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private final ShopManager shopManager;
     private final File shopsFolder;
+    private final MessageManager messageManager;
 
-    public EShopCommand(ShopManager shopManager, File shopsFolder) {
+    public EShopCommand(ShopManager shopManager, File shopsFolder, MessageManager messageManager) {
         this.shopManager = shopManager;
         this.shopsFolder = shopsFolder;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
@@ -61,19 +64,19 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage("§e=== EShop Admin Commands ===");
-        sender.sendMessage("§7/eshop additem <section> <material> <buy> <sell>");
-        sender.sendMessage("§7/eshop edititem <section> <index> <action> <key> <value>");
-        sender.sendMessage("§7/eshop deleteitem <section> <index>");
-        sender.sendMessage("§7/eshop addhanditem <section> <buy> <sell>");
-        sender.sendMessage("§7/eshop addsection <section> <material> <name> <slot>");
-        sender.sendMessage("§7/eshop editsection <section> <action> <key> <value>");
-        sender.sendMessage("§7/eshop deletesection <section>");
+        messageManager.sendCustom(sender, "<yellow>=== EShop Admin Commands ===");
+        messageManager.sendCustom(sender, "<gray>/eshop additem <section> <material> <buy> <sell>");
+        messageManager.sendCustom(sender, "<gray>/eshop edititem <section> <index> <action> <key> <value>");
+        messageManager.sendCustom(sender, "<gray>/eshop deleteitem <section> <index>");
+        messageManager.sendCustom(sender, "<gray>/eshop addhanditem <section> <buy> <sell>");
+        messageManager.sendCustom(sender, "<gray>/eshop addsection <section> <material> <name> <slot>");
+        messageManager.sendCustom(sender, "<gray>/eshop editsection <section> <action> <key> <value>");
+        messageManager.sendCustom(sender, "<gray>/eshop deletesection <section>");
     }
 
     private boolean handleAddItem(CommandSender sender, String[] args) {
         if (args.length < 5) {
-            sender.sendMessage("§c사용법: /eshop additem <section> <material> <buy> <sell>");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop additem <section> <material> <buy> <sell>");
             return true;
         }
 
@@ -82,7 +85,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
         Material material = Material.getMaterial(materialName);
         if (material == null) {
-            sender.sendMessage("§c잘못된 아이템 이름: " + materialName);
+            messageManager.sendCustom(sender, "<red>잘못된 아이템 이름: " + materialName);
             return true;
         }
 
@@ -92,7 +95,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
             File sectionFile = new File(shopsFolder, section + ".yml");
             if (!sectionFile.exists()) {
-                sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+                messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
                 return true;
             }
 
@@ -107,13 +110,13 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ " + materialName + "을(를) " + section + " 상점에 추가했습니다!");
-            sender.sendMessage("§7구매가: " + buyPrice + ", 판매가: " + sellPrice);
+            messageManager.send(sender, "eshop.item-added");
+            messageManager.sendCustom(sender, "<gray>구매가: " + buyPrice + ", 판매가: " + sellPrice);
 
         } catch (NumberFormatException e) {
-            sender.sendMessage("§c잘못된 숫자 형식입니다.");
+            messageManager.send(sender, "general.invalid-amount");
         } catch (Exception e) {
-            sender.sendMessage("§c아이템 추가 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>아이템 추가 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -121,8 +124,8 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleEditItem(CommandSender sender, String[] args) {
         if (args.length < 6) {
-            sender.sendMessage("§c사용법: /eshop edititem <section> <material> <property> <value>");
-            sender.sendMessage("§7Properties: buy, sell, dynamic");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop edititem <section> <material> <property> <value>");
+            messageManager.sendCustom(sender, "<gray>Properties: buy, sell, dynamic");
             return true;
         }
 
@@ -134,7 +137,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
         try {
             File sectionFile = new File(shopsFolder, section + ".yml");
             if (!sectionFile.exists()) {
-                sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+                messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
                 return true;
             }
 
@@ -142,7 +145,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             String itemKey = "items." + materialName;
 
             if (!config.contains(itemKey)) {
-                sender.sendMessage("§c아이템을 찾을 수 없습니다: " + materialName);
+                messageManager.sendCustom(sender, "<red>아이템을 찾을 수 없습니다: " + materialName);
                 return true;
             }
 
@@ -155,17 +158,17 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
                     config.set(itemKey + ".dynamic", Boolean.parseBoolean(value));
                     break;
                 default:
-                    sender.sendMessage("§c알 수 없는 속성: " + property);
+                    messageManager.sendCustom(sender, "<red>알 수 없는 속성: " + property);
                     return true;
             }
 
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ " + materialName + "의 " + property + "를 " + value + "(으)로 변경했습니다!");
+            messageManager.send(sender, "eshop.item-edited");
 
         } catch (Exception e) {
-            sender.sendMessage("§c아이템 수정 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>아이템 수정 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -173,7 +176,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleDeleteItem(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage("§c사용법: /eshop deleteitem <section> <material>");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop deleteitem <section> <material>");
             return true;
         }
 
@@ -183,7 +186,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
         try {
             File sectionFile = new File(shopsFolder, section + ".yml");
             if (!sectionFile.exists()) {
-                sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+                messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
                 return true;
             }
 
@@ -191,7 +194,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             String itemKey = "items." + materialName;
 
             if (!config.contains(itemKey)) {
-                sender.sendMessage("§c아이템을 찾을 수 없습니다: " + materialName);
+                messageManager.sendCustom(sender, "<red>아이템을 찾을 수 없습니다: " + materialName);
                 return true;
             }
 
@@ -199,10 +202,10 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ " + materialName + "을(를) " + section + " 상점에서 제거했습니다!");
+            messageManager.send(sender, "eshop.item-deleted");
 
         } catch (Exception e) {
-            sender.sendMessage("§c아이템 삭제 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>아이템 삭제 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -210,12 +213,12 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleAddHandItem(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다.");
+            messageManager.send(sender, "general.player-only");
             return true;
         }
 
         if (args.length < 4) {
-            sender.sendMessage("§c사용법: /eshop addhanditem <section> <buy> <sell>");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop addhanditem <section> <buy> <sell>");
             return true;
         }
 
@@ -223,7 +226,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
         ItemStack handItem = player.getInventory().getItemInMainHand();
 
         if (handItem == null || handItem.getType() == Material.AIR) {
-            sender.sendMessage("§c손에 아이템이 없습니다!");
+            messageManager.sendCustom(sender, "<red>손에 아이템이 없습니다!");
             return true;
         }
 
@@ -236,7 +239,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
             File sectionFile = new File(shopsFolder, section + ".yml");
             if (!sectionFile.exists()) {
-                sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+                messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
                 return true;
             }
 
@@ -253,13 +256,13 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ " + materialName + "을(를) " + section + " 상점에 추가했습니다!");
-            sender.sendMessage("§7구매가: " + buyPrice + ", 판매가: " + sellPrice);
+            messageManager.send(sender, "eshop.item-added");
+            messageManager.sendCustom(sender, "<gray>구매가: " + buyPrice + ", 판매가: " + sellPrice);
 
         } catch (NumberFormatException e) {
-            sender.sendMessage("§c잘못된 숫자 형식입니다.");
+            messageManager.send(sender, "general.invalid-amount");
         } catch (Exception e) {
-            sender.sendMessage("§c아이템 추가 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>아이템 추가 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -267,7 +270,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleAddSection(CommandSender sender, String[] args) {
         if (args.length < 5) {
-            sender.sendMessage("§c사용법: /eshop addsection <section> <material> <name> <slot>");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop addsection <section> <material> <name> <slot>");
             return true;
         }
 
@@ -277,7 +280,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
         Material icon = Material.getMaterial(materialName);
         if (icon == null) {
-            sender.sendMessage("§c잘못된 아이콘 아이템: " + materialName);
+            messageManager.sendCustom(sender, "<red>잘못된 아이콘 아이템: " + materialName);
             return true;
         }
 
@@ -286,7 +289,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
             File sectionFile = new File(shopsFolder, sectionId + ".yml");
             if (sectionFile.exists()) {
-                sender.sendMessage("§c이미 존재하는 카테고리입니다: " + sectionId);
+                messageManager.sendCustom(sender, "<red>이미 존재하는 카테고리입니다: " + sectionId);
                 return true;
             }
 
@@ -299,13 +302,13 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ 새 카테고리를 추가했습니다: " + name);
-            sender.sendMessage("§7ID: " + sectionId + ", 슬롯: " + slot);
+            messageManager.send(sender, "eshop.section-added");
+            messageManager.sendCustom(sender, "<gray>새 이름: " + name + " (ID: " + sectionId + ", 슬롯: " + slot + ")");
 
         } catch (NumberFormatException e) {
-            sender.sendMessage("§c잘못된 슬롯 번호입니다.");
+            messageManager.sendCustom(sender, "<red>잘못된 슬롯 번호입니다.");
         } catch (Exception e) {
-            sender.sendMessage("§c카테고리 추가 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>카테고리 추가 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -313,8 +316,8 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleEditSection(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage("§c사용법: /eshop editsection <section> <property> <value>");
-            sender.sendMessage("§7Properties: name, icon, slot");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop editsection <section> <property> <value>");
+            messageManager.sendCustom(sender, "<gray>Properties: name, icon, slot");
             return true;
         }
 
@@ -325,7 +328,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
         try {
             File sectionFile = new File(shopsFolder, section + ".yml");
             if (!sectionFile.exists()) {
-                sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+                messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
                 return true;
             }
 
@@ -338,7 +341,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
                 case "icon":
                     Material icon = Material.getMaterial(value.toUpperCase());
                     if (icon == null) {
-                        sender.sendMessage("§c잘못된 아이콘 아이템: " + value);
+                        messageManager.sendCustom(sender, "<red>잘못된 아이콘 아이템: " + value);
                         return true;
                     }
                     config.set("category.icon", value.toUpperCase());
@@ -347,17 +350,17 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
                     config.set("category.slot", Integer.parseInt(value));
                     break;
                 default:
-                    sender.sendMessage("§c알 수 없는 속성: " + property);
+                    messageManager.sendCustom(sender, "<red>알 수 없는 속성: " + property);
                     return true;
             }
 
             config.save(sectionFile);
             shopManager.reloadShops();
 
-            sender.sendMessage("§a✓ " + section + " 카테고리의 " + property + "를 변경했습니다!");
+            messageManager.send(sender, "eshop.section-edited");
 
         } catch (Exception e) {
-            sender.sendMessage("§c카테고리 수정 중 오류 발생: " + e.getMessage());
+            messageManager.sendCustom(sender, "<red>카테고리 수정 중 오류 발생: " + e.getMessage());
         }
 
         return true;
@@ -365,7 +368,7 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleDeleteSection(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage("§c사용법: /eshop deletesection <section>");
+            messageManager.sendCustom(sender, "<red>사용법: /eshop deletesection <section>");
             return true;
         }
 
@@ -373,15 +376,15 @@ public class EShopCommand implements CommandExecutor, TabCompleter {
 
         File sectionFile = new File(shopsFolder, section + ".yml");
         if (!sectionFile.exists()) {
-            sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + section);
+            messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + section);
             return true;
         }
 
         if (sectionFile.delete()) {
             shopManager.reloadShops();
-            sender.sendMessage("§a✓ " + section + " 카테고리를 삭제했습니다!");
+            messageManager.send(sender, "eshop.section-deleted");
         } else {
-            sender.sendMessage("§c카테고리 삭제에 실패했습니다.");
+            messageManager.sendCustom(sender, "<red>카테고리 삭제에 실패했습니다.");
         }
 
         return true;

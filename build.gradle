@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'me.minseok'
-version = '1.0.2'
+version = '1.0.3'
 
 java {
     toolchain {
@@ -22,6 +22,9 @@ dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT'
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
     
+    implementation 'net.kyori:adventure-text-minimessage:4.17.0'
+    implementation 'net.kyori:adventure-text-serializer-legacy:4.17.0'
+    
     implementation 'mysql:mysql-connector-java:8.0.33'
     implementation 'com.zaxxer:HikariCP:5.1.0'
 }
@@ -32,5 +35,5 @@ tasks.withType(JavaCompile) {
 
 jar {
     archiveBaseName = 'Paper-ShopCore'
-    archiveVersion = '1.0.2'
+    archiveVersion = '1.0.3'
 }

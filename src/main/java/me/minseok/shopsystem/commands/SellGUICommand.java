@@ -2,6 +2,7 @@ package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.economy.VaultEconomy;
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -23,16 +24,18 @@ public class SellGUICommand implements CommandExecutor, Listener {
 
     private final VaultEconomy economy;
     private final ShopManager shopManager;
+    private final MessageManager messageManager;
 
-    public SellGUICommand(VaultEconomy economy, ShopManager shopManager) {
+    public SellGUICommand(VaultEconomy economy, ShopManager shopManager, MessageManager messageManager) {
         this.economy = economy;
         this.shopManager = shopManager;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다.");
+            messageManager.send(sender, "general.player-only");
             return true;
         }
 
@@ -145,9 +148,9 @@ public class SellGUICommand implements CommandExecutor, Listener {
 
             EconomyResponse response = economy.depositPlayer(player, totalPrice);
             if (response.transactionSuccess()) {
-                player.sendMessage("§a✓ " + shopItem.getId() + " x" + amount + "을(를) " +
+                messageManager.sendCustom(player, "<green>✓ " + shopItem.getId() + " x" + amount + "을(를) " +
                         economy.format(totalPrice) + "에 판매했습니다!");
-                player.sendMessage("§7잔액: " + economy.format(response.balance));
+                messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
                 if (shopItem.hasDynamicPricing()) {
                     shopManager.adjustPrice(shopItem, false, amount);
@@ -158,7 +161,7 @@ public class SellGUICommand implements CommandExecutor, Listener {
                 for (ItemStack is : itemsToRemove) {
                     player.getInventory().addItem(is);
                 }
-                player.sendMessage("§c판매 실패: " + response.errorMessage);
+                messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
             }
         }
     }

@@ -1,6 +1,7 @@
 package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -16,20 +17,22 @@ import java.util.List;
 public class ShopGiveCommand implements CommandExecutor, TabCompleter {
 
     private final ShopManager shopManager;
+    private final MessageManager messageManager;
 
-    public ShopGiveCommand(ShopManager shopManager) {
+    public ShopGiveCommand(ShopManager shopManager, MessageManager messageManager) {
         this.shopManager = shopManager;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("shopsystem.admin")) {
-            sender.sendMessage("§c권한이 없습니다.");
+            messageManager.send(sender, "general.no-permission");
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage("§c사용법: /shopgive <section> <item_id> [player] [amount]");
+            messageManager.sendCustom(sender, "<red>사용법: /shopgive <section> <item_id> [player] [amount]");
             return true;
         }
 
@@ -38,7 +41,7 @@ public class ShopGiveCommand implements CommandExecutor, TabCompleter {
 
         ShopManager.ShopCategory category = shopManager.getCategory(sectionId);
         if (category == null) {
-            sender.sendMessage("§c카테고리를 찾을 수 없습니다: " + sectionId);
+            messageManager.sendCustom(sender, "<red>카테고리를 찾을 수 없습니다: " + sectionId);
             return true;
         }
 
@@ -54,7 +57,7 @@ public class ShopGiveCommand implements CommandExecutor, TabCompleter {
         }
 
         if (shopItem == null) {
-            sender.sendMessage("§c상점에서 해당 아이템을 찾을 수 없습니다: " + itemId);
+            messageManager.sendCustom(sender, "<red>상점에서 해당 아이템을 찾을 수 없습니다: " + itemId);
             return true;
         }
 
@@ -63,12 +66,12 @@ public class ShopGiveCommand implements CommandExecutor, TabCompleter {
         if (args.length >= 3) {
             target = Bukkit.getPlayer(args[2]);
             if (target == null) {
-                sender.sendMessage("§c플레이어를 찾을 수 없습니다: " + args[2]);
+                messageManager.send(sender, "general.invalid-player");
                 return true;
             }
         } else {
             if (!(sender instanceof Player)) {
-                sender.sendMessage("§c플레이어 이름을 명시해야 합니다.");
+                messageManager.send(sender, "general.player-only");
                 return true;
             }
             target = (Player) sender;
@@ -80,11 +83,11 @@ public class ShopGiveCommand implements CommandExecutor, TabCompleter {
             try {
                 amount = Integer.parseInt(args[3]);
                 if (amount <= 0 || amount > 64) {
-                    sender.sendMessage("§c수량은 1-64 사이여야 합니다.");
+                    messageManager.sendCustom(sender, "<red>수량은 1-64 사이여야 합니다.");
                     return true;
                 }
             } catch (NumberFormatException e) {
-                sender.sendMessage("§c잘못된 숫자 형식입니다.");
+                messageManager.sendCustom(sender, "<red>잘못된 숫자 형식입니다.");
                 return true;
             }
         }
@@ -110,9 +113,10 @@ public class ShopGiveCommand implements CommandExecutor, TabCompleter {
 
         target.getInventory().addItem(item);
 
-        sender.sendMessage("§a✓ " + target.getName() + "에게 " + shopItem.getId() + " x" + amount + "을(를) 지급했습니다!");
+        messageManager.sendCustom(sender,
+                "<green>✓ " + target.getName() + "에게 " + shopItem.getId() + " x" + amount + "을(를) 지급했습니다!");
         if (!sender.equals(target)) {
-            target.sendMessage("§a✓ " + shopItem.getId() + " x" + amount + "을(를) 받았습니다!");
+            messageManager.sendCustom(target, "<green>✓ " + shopItem.getId() + " x" + amount + "을(를) 받았습니다!");
         }
 
         return true;

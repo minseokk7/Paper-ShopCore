@@ -50,7 +50,7 @@ public class DatabaseManager {
     public void initialize() {
         try (Connection conn = getConnection()) {
             logger.log(Level.INFO, "Initializing database tables...");
-            
+
             // Create player_balances table
             executeUpdate(conn, """
                         CREATE TABLE IF NOT EXISTS player_balances (
@@ -134,41 +134,45 @@ public class DatabaseManager {
         }
     }
 
-    public boolean hasPurchased(java.util.UUID uuid, String itemId) {
-        if (uuid == null || itemId == null || itemId.isEmpty()) {
-            logger.log(Level.WARNING, "Invalid parameters for hasPurchased: uuid=" + uuid + ", itemId=" + itemId);
-            return false;
-        }
-        
-        String sql = "SELECT 1 FROM player_purchases WHERE uuid = ? AND item_id = ?";
-        try (Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, uuid.toString());
-            stmt.setString(2, itemId);
-            try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                return rs.next();
+    public java.util.concurrent.CompletableFuture<Boolean> hasPurchased(java.util.UUID uuid, String itemId) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            if (uuid == null || itemId == null || itemId.isEmpty()) {
+                logger.log(Level.WARNING, "Invalid parameters for hasPurchased: uuid=" + uuid + ", itemId=" + itemId);
+                return false;
             }
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to check purchase status for " + uuid + ": " + e.getMessage(), e);
-            return false;
-        }
+
+            String sql = "SELECT 1 FROM player_purchases WHERE uuid = ? AND item_id = ?";
+            try (Connection conn = getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, itemId);
+                try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                    return rs.next();
+                }
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Failed to check purchase status for " + uuid + ": " + e.getMessage(), e);
+                return false;
+            }
+        });
     }
 
-    public void recordPurchase(java.util.UUID uuid, String itemId) {
-        if (uuid == null || itemId == null || itemId.isEmpty()) {
-            logger.log(Level.WARNING, "Invalid parameters for recordPurchase: uuid=" + uuid + ", itemId=" + itemId);
-            return;
-        }
-        
-        String sql = "INSERT IGNORE INTO player_purchases (uuid, item_id) VALUES (?, ?)";
-        try (Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, uuid.toString());
-            stmt.setString(2, itemId);
-            stmt.executeUpdate();
-            logger.log(Level.INFO, "Recorded purchase for " + uuid + ": " + itemId);
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to record purchase for " + uuid + ": " + e.getMessage(), e);
-        }
+    public java.util.concurrent.CompletableFuture<Void> recordPurchase(java.util.UUID uuid, String itemId) {
+        return java.util.concurrent.CompletableFuture.runAsync(() -> {
+            if (uuid == null || itemId == null || itemId.isEmpty()) {
+                logger.log(Level.WARNING, "Invalid parameters for recordPurchase: uuid=" + uuid + ", itemId=" + itemId);
+                return;
+            }
+
+            String sql = "INSERT IGNORE INTO player_purchases (uuid, item_id) VALUES (?, ?)";
+            try (Connection conn = getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, itemId);
+                stmt.executeUpdate();
+                logger.log(Level.INFO, "Recorded purchase for " + uuid + ": " + itemId);
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Failed to record purchase for " + uuid + ": " + e.getMessage(), e);
+            }
+        });
     }
 }

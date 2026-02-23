@@ -1,5 +1,5 @@
 name: Paper-ShopCore
-version: 1.0.2
+version: 1.0.3
 main: me.minseok.shopsystem.ShopCore
 api-version: '1.21'
 author: minseok

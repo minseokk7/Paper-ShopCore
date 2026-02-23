@@ -1,9 +1,12 @@
 package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.database.DatabaseManager;
+import me.minseok.shopsystem.utils.MessageManager;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.plugin.Plugin;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,14 +14,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class BaltopCommand implements CommandExecutor {
 
     private final DatabaseManager database;
+    private final MessageManager messageManager;
+    private final Plugin plugin;
     private static final int PER_PAGE = 10;
 
-    public BaltopCommand(DatabaseManager database) {
+    public BaltopCommand(DatabaseManager database, MessageManager messageManager, Plugin plugin) {
         this.database = database;
+        this.messageManager = messageManager;
+        this.plugin = plugin;
     }
 
     @Override
@@ -31,26 +39,36 @@ public class BaltopCommand implements CommandExecutor {
                 if (page < 1)
                     page = 1;
             } catch (NumberFormatException e) {
-                sender.sendMessage("§c유효하지 않은 페이지 번호입니다");
+                messageManager.sendCustom(sender, "<red>유효하지 않은 페이지 번호입니다");
                 return true;
             }
         }
 
-        List<BalanceEntry> entries = getTopBalances(page);
-        if (entries.isEmpty()) {
-            sender.sendMessage("§c데이터가 없습니다");
-            return true;
-        }
+        // 비동기로 DB 조회 후 메인 스레드에서 결과 출력
+        final int finalPage = page;
+        CompletableFuture.supplyAsync(() -> getTopBalances(finalPage))
+                .thenAccept(entries -> {
+                    // 메인 스레드에서 메시지 전송
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (entries.isEmpty()) {
+                            messageManager.sendCustom(sender, "<red>데이터가 없습니다");
+                            return;
+                        }
 
-        sender.sendMessage("§e§l=== 💰 부자 순위 (" + page + "페이지) ===");
+                        messageManager.sendCustom(sender,
+                                "<yellow><bold>=== 💰 부자 순위 (" + finalPage + "페이지) ===");
 
-        int rank = (page - 1) * PER_PAGE + 1;
-        for (BalanceEntry entry : entries) {
-            String medal = getRankMedal(rank);
-            sender.sendMessage(String.format("§a%d. %s%s §f- §e%.2f원",
-                    rank, medal, entry.playerName, entry.balance));
-            rank++;
-        }
+                        int rank = (finalPage - 1) * PER_PAGE + 1;
+                        for (BalanceEntry entry : entries) {
+                            String medal = getRankMedal(rank);
+                            messageManager.sendCustom(sender,
+                                    "<green>" + rank + ". " + medal + entry.playerName
+                                            + " <white>- <yellow>"
+                                            + String.format("%.2f원", entry.balance));
+                            rank++;
+                        }
+                    });
+                });
 
         return true;
     }
@@ -92,14 +110,14 @@ public class BaltopCommand implements CommandExecutor {
                     String name = rs.getString("name");
 
                     if (name == null) {
-                        name = uuid.substring(0, 8); // Fallback to UUID prefix
+                        name = uuid.substring(0, 8); // UUID 앞 8자리로 대체
                     }
 
                     entries.add(new BalanceEntry(name, balance));
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().warning("부자 순위 조회 실패: " + e.getMessage());
         }
 
         return entries;

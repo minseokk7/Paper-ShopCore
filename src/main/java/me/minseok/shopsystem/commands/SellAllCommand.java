@@ -2,6 +2,7 @@ package me.minseok.shopsystem.commands;
 
 import me.minseok.shopsystem.economy.VaultEconomy;
 import me.minseok.shopsystem.shop.ShopManager;
+import me.minseok.shopsystem.utils.MessageManager;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -20,16 +21,18 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
 
     private final VaultEconomy economy;
     private final ShopManager shopManager;
+    private final MessageManager messageManager;
 
-    public SellAllCommand(VaultEconomy economy, ShopManager shopManager) {
+    public SellAllCommand(VaultEconomy economy, ShopManager shopManager, MessageManager messageManager) {
         this.economy = economy;
         this.shopManager = shopManager;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§c이 명령어는 플레이어만 사용할 수 있습니다.");
+            messageManager.send(sender, "general.player-only");
             return true;
         }
 
@@ -53,13 +56,13 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         ItemStack handItem = player.getInventory().getItemInMainHand();
 
         if (handItem == null || handItem.getType() == Material.AIR) {
-            player.sendMessage("§c손에 아이템이 없습니다!");
+            messageManager.sendCustom(player, "<red>손에 아이템이 없습니다!");
             return true;
         }
 
         ShopManager.ShopItem shopItem = shopManager.getShopItem(handItem);
         if (shopItem == null || shopItem.getSellPrice() <= 0) {
-            player.sendMessage("§c이 아이템은 판매할 수 없습니다!");
+            messageManager.sendCustom(player, "<red>이 아이템은 판매할 수 없습니다!");
             return true;
         }
 
@@ -67,7 +70,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         String categoryId = getCategoryForItem(shopItem);
         if (categoryId != null && !player.hasPermission("shopsystem.sellallhand." + categoryId) &&
                 !player.hasPermission("shopsystem.admin")) {
-            player.sendMessage("§c이 아이템을 판매할 권한이 없습니다!");
+            messageManager.send(player, "general.no-permission");
             return true;
         }
 
@@ -80,7 +83,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         }
 
         if (totalAmount == 0) {
-            player.sendMessage("§c판매할 아이템이 없습니다!");
+            messageManager.sendCustom(player, "<red>판매할 아이템이 없습니다!");
             return true;
         }
 
@@ -93,9 +96,9 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
 
         EconomyResponse response = economy.depositPlayer(player, totalValue);
         if (response.transactionSuccess()) {
-            player.sendMessage("§a✓ " + handItem.getType().name() + " x" + totalAmount + "을(를) " +
+            messageManager.sendCustom(player, "<green>✓ " + handItem.getType().name() + " x" + totalAmount + "을(를) " +
                     economy.format(totalValue) + "에 판매했습니다!");
-            player.sendMessage("§7잔액: " + economy.format(response.balance));
+            messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
             if (shopItem.hasDynamicPricing()) {
                 shopManager.adjustPrice(shopItem, false, totalAmount);
@@ -104,7 +107,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
             ItemStack toAdd = handItem.clone();
             toAdd.setAmount(totalAmount);
             player.getInventory().addItem(toAdd);
-            player.sendMessage("§c판매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
         }
 
         return true;
@@ -123,7 +126,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         }
 
         if (shopItem == null || shopItem.getSellPrice() <= 0) {
-            player.sendMessage("§c판매할 수 없는 아이템이거나 찾을 수 없습니다: " + itemName);
+            messageManager.sendCustom(player, "<red>판매할 수 없는 아이템이거나 찾을 수 없습니다: " + itemName);
             return true;
         }
 
@@ -131,7 +134,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         String categoryId = getCategoryForItem(shopItem);
         if (categoryId != null && !player.hasPermission("shopsystem.sellallitem." + categoryId) &&
                 !player.hasPermission("shopsystem.admin")) {
-            player.sendMessage("§c이 아이템을 판매할 권한이 없습니다!");
+            messageManager.send(player, "general.no-permission");
             return true;
         }
 
@@ -158,7 +161,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         }
 
         if (totalAmount == 0) {
-            player.sendMessage("§c인벤토리에 해당 아이템이 없습니다!");
+            messageManager.sendCustom(player, "<red>인벤토리에 해당 아이템이 없습니다!");
             return true;
         }
 
@@ -171,9 +174,9 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
 
         EconomyResponse response = economy.depositPlayer(player, totalValue);
         if (response.transactionSuccess()) {
-            player.sendMessage("§a✓ " + shopItem.getId() + " x" + totalAmount + "을(를) " +
+            messageManager.sendCustom(player, "<green>✓ " + shopItem.getId() + " x" + totalAmount + "을(를) " +
                     economy.format(totalValue) + "에 판매했습니다!");
-            player.sendMessage("§7잔액: " + economy.format(response.balance));
+            messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
             if (shopItem.hasDynamicPricing()) {
                 shopManager.adjustPrice(shopItem, false, totalAmount);
@@ -182,7 +185,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
             for (ItemStack is : itemsToRemove) {
                 player.getInventory().addItem(is);
             }
-            player.sendMessage("§c판매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
         }
 
         return true;
@@ -215,7 +218,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         }
 
         if (itemsToSell.isEmpty()) {
-            player.sendMessage("§c판매할 수 있는 아이템이 없습니다!");
+            messageManager.sendCustom(player, "<red>판매할 수 있는 아이템이 없습니다!");
             return true;
         }
 
@@ -227,9 +230,9 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
         EconomyResponse response = economy.depositPlayer(player, totalValue);
         if (response.transactionSuccess()) {
             int totalItems = itemsToSell.values().stream().mapToInt(Integer::intValue).sum();
-            player.sendMessage("§a✓ " + totalItems + "개 아이템을 " +
+            messageManager.sendCustom(player, "<green>✓ " + totalItems + "개 아이템을 " +
                     economy.format(totalValue) + "에 판매했습니다!");
-            player.sendMessage("§7잔액: " + economy.format(response.balance));
+            messageManager.sendCustom(player, "<gray>잔액: <white>" + economy.format(response.balance));
 
             // Adjust prices for dynamic items
             for (Map.Entry<ShopManager.ShopItem, Integer> entry : itemsToSell.entrySet()) {
@@ -242,7 +245,7 @@ public class SellAllCommand implements CommandExecutor, TabCompleter {
             for (ItemStack is : itemsToRemove) {
                 player.getInventory().addItem(is);
             }
-            player.sendMessage("§c판매 실패: " + response.errorMessage);
+            messageManager.sendCustom(player, "<red>판매 실패: " + response.errorMessage);
         }
 
         return true;
