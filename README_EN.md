@@ -20,7 +20,7 @@ This plugin is the backend component of the **Velocity Shop System**, running on
 - **Cross-Server Synchronization**: Real-time synchronization of price information with other servers via the Velocity proxy.
 
 ## Installation
-1. Place the `VelocityShopSystem-Backend-1.0.0.jar` file into the `plugins` folder of each server.
+1. Place the `VelocityShopSystem-Backend-1.0.2.jar` file into the `plugins` folder of each server.
 2. Start the server to generate the `config.yml` file.
 3. Configure the database connection information in `config.yml`.
 
