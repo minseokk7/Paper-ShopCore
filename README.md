@@ -12,7 +12,7 @@
 </div>
 
 
-이 플러그인은 **ShopCore**의 백엔드 부분으로, Spigot/Paper/Purpur 서버(Lobby, Survival, Creative 등)에서 실행됩니다.
+이 플러그인은 **ShopCore**의 백엔드 부분으로, Spigot/Paper/Purpur 서버에서 실행됩니다.
 
 ## 주요 기능
 - **상점 GUI**: 플레이어가 아이템을 구매하고 판매할 수 있는 GUI 제공.
