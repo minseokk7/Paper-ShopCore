@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'me.minseok'
-version = '1.0.0'
+version = '1.0.2'
 
 java {
     toolchain {
@@ -31,6 +31,6 @@ tasks.withType(JavaCompile) {
 }
 
 jar {
-    archiveBaseName = 'Shop-Backend'
-    archiveVersion = '1.0.0'
+    archiveBaseName = 'Paper-ShopCore'
+    archiveVersion = '1.0.2'
 }
